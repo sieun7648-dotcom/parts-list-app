@@ -18,10 +18,10 @@ st.markdown("""
   [data-testid="stAppViewContainer"] { background: #F4F7FB; }
   [data-testid="stHeader"] { background: #0F1E35; }
   .main-title {
-    background: #0F1E35; color: #fff;
-    padding: 18px 28px; border-radius: 8px;
-    font-size: 20px; font-weight: 700;
-    margin-bottom: 20px;
+    background: #fff; color: #111;
+    padding: 14px 0 10px 0;
+    font-size: 16px; font-weight: 500;
+    margin-bottom: 20px; border-bottom: 2px solid #111;
     display: flex; align-items: center; gap: 10px;
   }
   .main-title span { color: #6AABDE; font-size: 13px; font-weight: 400; }
@@ -30,26 +30,26 @@ st.markdown("""
     border-radius: 8px; padding: 20px; margin-bottom: 16px;
   }
   .card-title {
-    font-size: 12px; font-weight: 700; color: #0F1E35;
+    font-size: 11px; font-weight: 500; color: #555;
     text-transform: uppercase; letter-spacing: .4px;
     margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
   }
   .step-badge {
-    background: #1D5FA8; color: #fff;
+    background: #333; color: #fff;
     width: 20px; height: 20px; border-radius: 50%;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 10px; font-weight: 800;
   }
   .stButton > button {
-    background: #1D5FA8; color: #fff;
+    background: #333; color: #fff;
     border: none; border-radius: 6px;
     font-weight: 700; padding: 10px 24px;
     transition: background .15s;
   }
-  .stButton > button:hover { background: #3B82C4; }
+  .stButton > button:hover { background: #444; }
   .stCheckbox label { font-size: 12px; font-weight: 600; }
   div[data-testid="metric-container"] {
-    background: #EBF3FB; border-radius: 8px; padding: 12px;
+    background: #f5f5f5; border-radius: 6px; padding: 12px;
   }
 </style>
 """, unsafe_allow_html=True)
@@ -88,7 +88,7 @@ def border():
     return Border(left=s, right=s, top=s, bottom=s)
 def border_right():
     thin = Side(style="thin", color=LINE)
-    med  = Side(style="medium", color="4A6FA5")
+    med  = Side(style="medium", color="999999")
     return Border(left=thin, right=med, top=thin, bottom=thin)
 
 def style_cell(cell, f=None, fl=None, al=None, bd=None):
@@ -190,8 +190,8 @@ def make_excel(result, selected_cats):
         else:
             c2 = ws1.cell(2, col_idx, "자재명")
             c3 = ws1.cell(2, col_idx+1, "수량")
-            style_cell(c3, font(True,"A8C4E0",9), fill(NAVY2), align("center"), border())
-        style_cell(c2, font(True,"A8C4E0",9), fill(NAVY2), align("center"), border())
+            style_cell(c3, font(True,"EEEEEE",9), fill(NAVY2), align("center"), border())
+        style_cell(c2, font(True,"EEEEEE",9), fill(NAVY2), align("center"), border())
         cat_col[cat["key"]] = col_idx
         col_idx += cols
 
@@ -210,7 +210,7 @@ def make_excel(result, selected_cats):
         ws1.row_dimensions[row_idx].height = 15
         # 제품품번
         c = ws1.cell(row_idx, 1, row["품번"])
-        style_cell(c, font(True,NAVY), fill(LGRAY), align("center"), border_right())
+        style_cell(c, font(True,"111111"), fill(LGRAY), align("center"), border_right())
         if max_n > 1:
             ws1.merge_cells(start_row=row_idx,start_column=1,end_row=row_idx+max_n-1,end_column=1)
 
@@ -279,13 +279,13 @@ def make_excel(result, selected_cats):
 
         # No
         cn = ws2.cell(r2, 1, no)
-        style_cell(cn, font(bold=True,color=NAVY), fill(LGRAY), align("center"), border())
+        style_cell(cn, font(bold=True,color="111111"), fill(LGRAY), align("center"), border())
         if len(lines) > 1:
             ws2.merge_cells(start_row=r2,start_column=1,end_row=r2+len(lines)-1,end_column=1)
 
         # 제품품번
         cp = ws2.cell(r2, 2, row["품번"])
-        style_cell(cp, font(bold=True,color=NAVY), fill(LGRAY), align("center"), border_right())
+        style_cell(cp, font(bold=True,color="111111"), fill(LGRAY), align("center"), border_right())
         if len(lines) > 1:
             ws2.merge_cells(start_row=r2,start_column=2,end_row=r2+len(lines)-1,end_column=2)
 
@@ -311,7 +311,7 @@ def make_excel(result, selected_cats):
 # ── UI ──────────────────────────────────────────────────
 st.markdown("""
 <div class="main-title">
-  🤖 ROBOSTAR PARTS LIST 생성기
+  <span style="font-size:20px;">●</span> ROBOSTAR PARTS LIST 생성기
   <span>다중제품 BOM → 파츠리스트 자동 변환</span>
 </div>
 """, unsafe_allow_html=True)
