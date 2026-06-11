@@ -68,15 +68,15 @@ CATS = [
 ]
 
 # ── 스타일 헬퍼 ─────────────────────────────────────────
-NAVY   = "0F1E35"
-NAVY2  = "1C3A60"
+NAVY   = "333333"
+NAVY2  = "555555"
 WHITE  = "FFFFFF"
-BLUE   = "1D5FA8"
-LGRAY  = "F0F4FA"
-STRIPE = "EFF5FB"
-LINE   = "D4E0EE"
-VIOLET = "5B3FA6"
-MUTED  = "94A3B8"
+BLUE   = "111111"
+LGRAY  = "F5F5F5"
+STRIPE = "FAFAFA"
+LINE   = "DDDDDD"
+VIOLET = "333333"
+MUTED  = "999999"
 
 def fill(hex_): return PatternFill("solid", fgColor=hex_)
 def font(bold=False, color="000000", sz=10, name="맑은 고딕"):
