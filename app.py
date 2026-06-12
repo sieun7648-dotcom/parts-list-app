@@ -58,7 +58,7 @@ CATS = [
     {"key": "LM GUIDE",            "pfx": "02004",   "type": "normal"},
     {"key": "BALL BEARING",        "pfx": "07002",   "type": "normal"},
     {"key": "ANGULAR BEARING",     "pfx": "07001",   "type": "normal"},
-    {"key": "PULLEY",              "pfx": "0900115", "type": "normal"},
+    {"key": "PULLEY",              "pfx": "0900115", "type": "normal", "extra_match": "pulley"},
     {"key": "TIMING BELT",         "pfx": "1300",    "type": "normal"},
     {"key": "COUPLING",            "pfx": "10002",   "type": "normal"},
     {"key": "POWER LOCK",          "pfx": "10004",   "type": "normal"},
@@ -66,6 +66,47 @@ CATS = [
     {"key": "SCALE TAPE",           "pfx": "06005",   "type": "normal"},
     {"key": "LINEAR MOTOR",         "pfx": "05004",   "type": "normal"},
 ]
+# ── 풀리 규격 키워드 (자재명 기반 추가 매칭) ────────────
+# 새 규격 추가 시 이 리스트에만 추가하면 됨
+PULLEY_KEYWORDS = [
+    "S2M", "S3M", "S5M", "S8M", "S14M",   # 타이밍 벨트 피치 규격
+    "RPP3", "RPP5", "RPP8", "RPP14",        # RPP 계열
+    "HTD3", "HTD5", "HTD8", "HTD14",        # HTD 계열
+    "MOTOR PULLEY", "B-SCREW PULLEY",        # 명칭 직접 포함
+    "가공품, PULLEY",                        # 가공품 풀리
+    # ↑ 새 규격 추가 시 여기에 추가
+]
+
+def is_pulley_name(jm):
+    """자재명 기반 풀리 판별 — 규격 키워드 OR (PULLEY 포함 AND 커플링 등 제외어 없음)"""
+    jmu = jm.upper()
+    # 규격 키워드로 확실히 풀리인 경우
+    if any(kw.upper() in jmu for kw in PULLEY_KEYWORDS):
+        return True
+    # "PULLEY" 단어 포함 + 제외 키워드 없는 경우
+    exclude_words = ["COUPLING", "BRACKET", "COVER", "HOUSING", "PLATE"]
+    if "PULLEY" in jmu and not any(ex in jmu for ex in exclude_words):
+        return True
+    return False
+
+def match_cat(cat, row):
+    """카테고리별 자재 매칭 로직"""
+    jb = row["자재번호"]
+    jm = row["자재명"].upper()
+
+    if cat.get("extra_match") == "pulley":
+        # 1. 자재번호 prefix 매칭
+        if jb.startswith(cat["pfx"]):
+            return True
+        # 2. 자재명 기반 풀리 판별
+        if is_pulley_name(row["자재명"]):
+            return True
+        return False
+
+    # 일반 카테고리: prefix 매칭
+    return jb.startswith(cat["pfx"])
+
+
 
 # ── 엑셀 스타일 상수 ─────────────────────────────────────
 NAVY   = "333333"
@@ -207,7 +248,7 @@ def build_parts_list(bom, selected_cats):
         sub = [r for r in bom if r["품번"] == prod]
         row = {"품번": prod}
         for cat in selected_cats:
-            matched = [r for r in sub if r["자재번호"].startswith(cat["pfx"])]
+            matched = [r for r in sub if match_cat(cat, r)]
             if cat["type"] == "bscode":
                 row[cat["key"]] = [{"code": r["자재번호"]} for r in matched]
             else:
