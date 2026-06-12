@@ -62,6 +62,9 @@ CATS = [
     {"key": "TIMING BELT",         "pfx": "1300",    "type": "normal"},
     {"key": "COUPLING",            "pfx": "10002",   "type": "normal"},
     {"key": "POWER LOCK",          "pfx": "10004",   "type": "normal"},
+    {"key": "SCALE HEAD",           "pfx": "06002",   "type": "normal"},
+    {"key": "SCALE TAPE",           "pfx": "06005",   "type": "normal"},
+    {"key": "LINEAR MOTOR",         "pfx": "05004",   "type": "normal"},
 ]
 
 # ── 엑셀 스타일 상수 ─────────────────────────────────────
