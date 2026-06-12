@@ -128,54 +128,76 @@ def read_bom_file(uploaded):
 # ── BOM 읽기 (구 R2P 붙여넣기) ──────────────────────────
 def read_bom_paste(text):
     """
-    붙여넣기 텍스트에서 BOM 파싱
-    컬럼: 제품코드 | 자재코드 | 자재명 | 수량  (탭 또는 공백 구분)
-    첫 행이 헤더면 자동 감지
+    구 R2P 복사 데이터 파싱
+    구조: (빈탭) | 자재코드 | 자재명 | 도면번호 | 단위 | 품목구분 | 소요량 | ... | 제품코드
     """
-    lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+    import re
+    lines = [l for l in text.strip().splitlines() if l.strip()]
     if not lines:
         raise ValueError("데이터가 없습니다")
 
-    import re
-    def split_line(line):
-        # 탭으로 먼저 분리, 없으면 2개 이상 공백으로 분리
-        if "\t" in line:
-            return [c.strip() for c in line.split("\t")]
-        else:
-            return [c.strip() for c in re.split(r"  +", line)]
+    def parse_line(line):
+        cols = line.split("\t")
+        if len(cols) < 4:
+            return None
+        pn = cols[-1].strip()
+        if not pn:
+            return None
+        jb, jm, qty = "", "", 1
+        code_idx = -1
+        for i, c in enumerate(cols[:-1]):
+            cs = c.strip()
+            if cs and re.match(r"^[0-9A-Za-z]", cs):
+                jb = cs
+                code_idx = i
+                break
+        if code_idx < 0:
+            return None
+        for j in range(code_idx + 1, len(cols) - 1):
+            cs = cols[j].strip()
+            if not cs or cs == " ":
+                continue
+            if re.match(r"^(EA|MT|PC|SET|KG|R|M|L)$", cs, re.I):
+                for k in range(j, min(j + 4, len(cols) - 1)):
+                    try:
+                        qty = float(cols[k].strip().replace(",", ""))
+                        break
+                    except:
+                        pass
+                break
+            # 자재명: 한글 있거나, 콤마 있거나, 공백 있거나, 길이 > 12
+            if re.search(r"[가-힣]", cs) or "," in cs or " " in cs or len(cs) > 12:
+                jm = cs
+                for k in range(j + 1, len(cols) - 1):
+                    cs2 = cols[k].strip()
+                    if re.match(r"^(EA|MT|PC|SET|KG|R|M|L)$", cs2, re.I):
+                        for m in range(k, min(k + 4, len(cols) - 1)):
+                            try:
+                                qty = float(cols[m].strip().replace(",", ""))
+                                break
+                            except:
+                                pass
+                        break
+                break
+        if not jm:
+            return None
+        return {"품번": pn, "자재번호": jb, "자재명": jm, "수량": qty}
 
-    # 헤더 감지
-    first = split_line(lines[0])
-    header_keywords = ["제품", "자재", "품번", "품목", "코드", "수량", "명"]
-    is_header = any(any(k in c for k in header_keywords) for c in first)
-
-    col_map = {"품번": 0, "자재번호": 1, "자재명": 2, "수량": 3}  # 기본값
-
-    if is_header:
-        for j, v in enumerate(first):
-            if any(k in v for k in ["제품코드","제품품번","품번","제품"]): col_map["품번"]    = j
-            if any(k in v for k in ["자재코드","자재번호","자재번","부품코드"]): col_map["자재번호"] = j
-            if any(k in v for k in ["자재명","품명","부품명"]):    col_map["자재명"]  = j
-            if any(k in v for k in ["수량","소요량"]):             col_map["수량"]    = j
-        data_lines = lines[1:]
-    else:
-        data_lines = lines
-
+    header_kw = ["품번", "자재", "코드", "품명", "수량", "소요량", "단위"]
     data = []
-    for line in data_lines:
-        cols = split_line(line)
-        if len(cols) < 3:
+    for line in lines:
+        cols_check = line.split("\t")
+        first_vals = " ".join(c.strip() for c in cols_check[:5])
+        if any(k in first_vals for k in header_kw):
             continue
-        pn = cols[col_map.get("품번", 0)]    if col_map.get("품번",    0) < len(cols) else ""
-        jb = cols[col_map.get("자재번호", 1)] if col_map.get("자재번호", 1) < len(cols) else ""
-        jm = cols[col_map.get("자재명",  2)] if col_map.get("자재명",  2) < len(cols) else ""
-        try:    qty = float(cols[col_map.get("수량", 3)]) if col_map.get("수량", 3) < len(cols) else 1
-        except: qty = 1
-        if pn and jm and jm != "TOTAL":
-            data.append({"품번": pn, "자재번호": jb, "자재명": jm, "수량": qty})
+        row = parse_line(line)
+        if row and row["품번"] and row["자재명"]:
+            data.append(row)
+
     if not data:
-        raise ValueError("파싱된 데이터가 없습니다. 컬럼 순서(제품코드/자재코드/자재명/수량)를 확인해주세요")
+        raise ValueError("파싱된 데이터가 없습니다. R2P에서 복사한 데이터인지 확인해주세요")
     return data
+
 
 # ── 파츠리스트 빌드 ──────────────────────────────────────
 def build_parts_list(bom, selected_cats):
