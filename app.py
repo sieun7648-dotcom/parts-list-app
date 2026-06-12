@@ -92,14 +92,18 @@ def is_pulley_name(jm):
 def match_cat(cat, row):
     """카테고리별 자재 매칭 로직"""
     jb = row["자재번호"]
-    jm = row["자재명"].upper()
+    jm = row["자재명"]
 
     if cat.get("extra_match") == "pulley":
+        # 다른 카테고리 prefix로 매칭되는 자재는 PULLEY 제외
+        other_pfx = [c["pfx"] for c in CATS if c["key"] != "PULLEY"]
+        if any(jb.startswith(p) for p in other_pfx):
+            return False
         # 1. 자재번호 prefix 매칭
         if jb.startswith(cat["pfx"]):
             return True
-        # 2. 자재명 기반 풀리 판별
-        if is_pulley_name(row["자재명"]):
+        # 2. 자재명 기반 풀리 판별 (단, TIMING BELT 문자 포함이면 제외)
+        if is_pulley_name(jm) and "TIMING BELT" not in jm.upper():
             return True
         return False
 
