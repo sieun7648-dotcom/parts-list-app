@@ -3,8 +3,12 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from datetime import date
+from datetime import datetime, timezone, timedelta
 import io
+
+def today_kst():
+    kst = timezone(timedelta(hours=9))
+    return datetime.now(kst).strftime('%Y%m%d')
 
 st.set_page_config(
     page_title="ROBOSTAR PARTS LIST 생성기",
@@ -497,7 +501,7 @@ with col2:
 
         st.markdown("---")
 
-        fname = f"PARTS_LIST_{date.today().strftime('%Y%m%d')}.xlsx"
+        fname = f"PARTS_LIST_{today_kst()}.xlsx"
         buf = make_excel(result, selected_cats)
         st.download_button(
             label="⬇ 엑셀 다운로드 (가로형 + 세로형)",
