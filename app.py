@@ -5,6 +5,9 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import datetime, timezone, timedelta
 import io
+import base64
+import json
+import streamlit.components.v1 as components
 
 def today_kst():
     kst = timezone(timedelta(hours=9))
@@ -400,6 +403,117 @@ def make_excel(result, selected_cats):
     buf.seek(0)
     return buf
 
+# ── 저장 위치 선택 다운로드 버튼 ─────────────────────────
+def save_as_button(file_bytes, file_name):
+    """
+    Chrome/Edge에서는 '다른 이름으로 저장' 창을 띄웁니다.
+    브라우저가 File System Access API를 지원하지 않거나 저장창 호출이
+    차단된 경우에는 기존처럼 다운로드 폴더로 바로 저장합니다.
+    """
+    encoded = base64.b64encode(file_bytes).decode("ascii")
+    safe_name = json.dumps(file_name, ensure_ascii=False)
+    mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    html = f"""
+    <div class="save-wrap">
+      <button id="saveBtn" type="button">⬇ 엑셀 다운로드 (가로형 + 세로형)</button>
+      <div id="saveMsg">클릭하면 다운로드 폴더가 기본으로 열린 뒤 저장 위치를 변경할 수 있습니다.</div>
+    </div>
+
+    <style>
+      html, body {{ margin: 0; padding: 0; background: transparent; font-family: sans-serif; }}
+      .save-wrap {{ width: 100%; }}
+      #saveBtn {{
+        width: 100%; height: 42px; padding: 0 20px;
+        border: 0; border-radius: 5px; cursor: pointer;
+        background: #222; color: #fff; font-size: 14px; font-weight: 600;
+      }}
+      #saveBtn:hover {{ background: #444; }}
+      #saveBtn:disabled {{ cursor: wait; opacity: .65; }}
+      #saveMsg {{ margin-top: 7px; color: #777; font-size: 11px; line-height: 1.35; }}
+    </style>
+
+    <script>
+      const fileName = {safe_name};
+      const mimeType = {json.dumps(mime)};
+      const fileBase64 = "{encoded}";
+
+      function base64ToBlob(base64, mime) {{
+        const binary = atob(base64);
+        const chunkSize = 1024 * 512;
+        const chunks = [];
+        for (let offset = 0; offset < binary.length; offset += chunkSize) {{
+          const slice = binary.slice(offset, offset + chunkSize);
+          const bytes = new Uint8Array(slice.length);
+          for (let i = 0; i < slice.length; i++) bytes[i] = slice.charCodeAt(i);
+          chunks.push(bytes);
+        }}
+        return new Blob(chunks, {{ type: mime }});
+      }}
+
+      function fallbackDownload(blob) {{
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }}
+
+      document.getElementById("saveBtn").addEventListener("click", async () => {{
+        const button = document.getElementById("saveBtn");
+        const message = document.getElementById("saveMsg");
+        const blob = base64ToBlob(fileBase64, mimeType);
+        button.disabled = true;
+        message.textContent = "저장 위치 선택창을 여는 중입니다...";
+
+        let pickerWindow = window;
+        try {{
+          if (window.parent && window.parent !== window &&
+              typeof window.parent.showSaveFilePicker === "function") {{
+            pickerWindow = window.parent;
+          }}
+        }} catch (e) {{
+          pickerWindow = window;
+        }}
+
+        try {{
+          if (typeof pickerWindow.showSaveFilePicker !== "function") {{
+            throw new Error("SAVE_PICKER_UNSUPPORTED");
+          }}
+
+          const handle = await pickerWindow.showSaveFilePicker({{
+            suggestedName: fileName,
+            startIn: "downloads",
+            types: [{{
+              description: "Excel 통합 문서",
+              accept: {{
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"]
+              }}
+            }}]
+          }});
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          message.textContent = "저장이 완료되었습니다.";
+        }} catch (error) {{
+          if (error && error.name === "AbortError") {{
+            message.textContent = "저장을 취소했습니다.";
+          }} else {{
+            console.warn("저장 위치 선택창을 사용할 수 없어 기본 다운로드로 전환합니다.", error);
+            fallbackDownload(blob);
+            message.textContent = "저장창을 사용할 수 없어 기존처럼 다운로드 폴더에 저장했습니다.";
+          }}
+        }} finally {{
+          button.disabled = false;
+        }}
+      }});
+    </script>
+    """
+    components.html(html, height=72, scrolling=False)
+
 # ── UI ───────────────────────────────────────────────────
 st.markdown("""
 <div class="main-title">
@@ -503,13 +617,7 @@ with col2:
 
         fname = f"PARTS_LIST_{today_kst()}.xlsx"
         buf = make_excel(result, selected_cats)
-        st.download_button(
-            label="⬇ 엑셀 다운로드 (가로형 + 세로형)",
-            data=buf,
-            file_name=fname,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+        save_as_button(buf.getvalue(), fname)
     else:
         st.info("BOM을 입력하고 자재를 선택하면 미리보기가 생성됩니다.")
 
